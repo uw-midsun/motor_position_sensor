@@ -1,11 +1,10 @@
 /* Standard library Headers */
 
 /* Inter-component Headers */
-#include "delay.h"
-#include "status.h"
 
 /* Intra-component Headers */
 #include "mlx90382.h"
+
 #include "motor_sensor.h"
 #include "motor_sensor_hw_defs.h"
 

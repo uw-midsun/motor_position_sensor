@@ -10,6 +10,7 @@
 #include "mlx90382.h"
 #include "motor_sensor.h"
 #include "motor_sensor_hw_defs.h"
+#include "sp3485.h"
 
 static MotorSensorStorage *s_motor_sensor_storage;
 
@@ -31,6 +32,7 @@ StatusCode motor_sensor_init(MotorSensorStorage *storage, MotorSensorConfig *con
   spi_init(s_motor_sensor_storage->config->spi_port, &s_motor_sensor_storage->config->spi_settings);
 
   mlx90382_init(s_motor_sensor_storage);
+  sp3485_init(&s_motor_sensor_storage);
 
   gpio_init_pin(&s_motor_sensor_uart_de, GPIO_OUTPUT_PUSH_PULL, GPIO_STATE_LOW);
   gpio_init_pin(&s_motor_sensor_uart_nre, GPIO_OUTPUT_PUSH_PULL, GPIO_STATE_LOW);

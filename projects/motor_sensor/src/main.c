@@ -12,6 +12,7 @@
 #include "mlx90382.h"
 #include "motor_sensor.h"
 #include "motor_sensor_hw_defs.h"
+#include "sp3485.h"
 
 MotorSensorStorage motor_sensor_storage = { 0 };
 
@@ -33,6 +34,7 @@ void pre_loop_init() {}
 
 void run_fast_cycle() {
   mlx90382_run();
+  sp3485_run();
 }
 
 void run_medium_cycle() {}
