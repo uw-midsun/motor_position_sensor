@@ -9,6 +9,7 @@
 #include "tasks.h"
 
 /* Intra-component Headers */
+#include "mlx90382.h"
 #include "motor_sensor.h"
 #include "motor_sensor_hw_defs.h"
 
@@ -30,7 +31,9 @@ MotorSensorConfig motor_sensor_config = {
 
 void pre_loop_init() {}
 
-void run_fast_cycle() {}
+void run_fast_cycle() {
+  mlx90382_run();
+}
 
 void run_medium_cycle() {}
 

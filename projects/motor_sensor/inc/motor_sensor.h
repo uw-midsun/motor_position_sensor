@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
   MotorSensorConfig *config;
-  uint32_t readings;
+  uint16_t reading;
 } MotorSensorStorage;
 
 StatusCode motor_sensor_init(MotorSensorStorage *storage, MotorSensorConfig *config);
