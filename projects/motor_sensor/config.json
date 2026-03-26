@@ -2,6 +2,10 @@
     "libs": [
         "FreeRTOS",
         "ms-common",
-        "master"
+        "master",
+        "ms-drivers"
+    ],
+    "arm_libs": [
+        "stm32f10x"
     ]
 }

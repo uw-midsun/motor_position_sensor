@@ -1,14 +1,17 @@
 /* Standard library Headers */
 
 /* Inter-component Headers */
+#include "log.h"
 
 /* Intra-component Headers */
 #include "mlx90382.h"
-
 #include "motor_sensor.h"
 #include "motor_sensor_hw_defs.h"
 
 static MotorSensorStorage *s_motor_sensor_storage;
+static StatusCode status = STATUS_CODE_OK;
+
+#define MLX_DEBUG 0U
 
 static StatusCode register_read(Mlx90382Registers addr, uint16_t *out) {
   if (addr > MLX90382_MAX_REG_ADDR) {
@@ -82,12 +85,20 @@ StatusCode mlx90382_init(MotorSensorStorage *storage) {
 }
 
 StatusCode mlx90382_run() {
-  uint8_t tx_buffer[4U] = { 0x00, 0x00, 0x00, 0x00 };
-  uint8_t rx_buffer[4U];
+  uint8_t tx_buffer[5U] = { 0x00, 0x00, 0x00, 0x00, 0x00 };
+  uint8_t rx_buffer[5U];
 
-  status_ok_or_return(spi_exchange(MOTOR_SENSOR_SPI_PORT, tx_buffer, 4U, rx_buffer, 4U));
+  status = spi_exchange(MOTOR_SENSOR_SPI_PORT, tx_buffer, 5U, rx_buffer, 5U);
+  if (status != STATUS_CODE_OK) {
+    LOG_DEBUG("SPI transaction failed %d\r\n", status);
+    return status;
+  }
 
-  s_motor_sensor_storage->reading = (uint16_t)((rx_buffer[2U] << 8) | rx_buffer[3U]);
+  s_motor_sensor_storage->mlx903_reading = (uint16_t)((rx_buffer[4U] << 8) | rx_buffer[3U]);
+
+#if (MLX_DEBUG == 1U)
+  LOG_DEBUG("Reading: %u\r\n", s_motor_sensor_storage->mlx903_reading);
+#endif
 
   return STATUS_CODE_OK;
 }

@@ -6,6 +6,7 @@
 #include "spi.h"
 
 /* Intra-component Headers */
+#include "motor_sensor.h"
 
 #define SPI_ADDR(x) x >> 1
 

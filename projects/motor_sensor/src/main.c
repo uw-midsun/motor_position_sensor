@@ -2,6 +2,7 @@
 /* Standard library Headers */
 
 /* Inter-component Headers */
+#include "delay.h"
 #include "gpio.h"
 #include "log.h"
 #include "master_task.h"
@@ -13,6 +14,7 @@
 #include "motor_sensor.h"
 #include "motor_sensor_hw_defs.h"
 #include "sp3485.h"
+#include "thermistor.h"
 
 MotorSensorStorage motor_sensor_storage = { 0 };
 
@@ -24,7 +26,7 @@ MotorSensorConfig motor_sensor_config = {
   .spi_port = MOTOR_SENSOR_SPI_PORT,
   .spi_settings = { .baudrate = MOTOR_SENSOR_SPI_BAUDRATE,
                     .mode = MOTOR_SENSOR_SPI_MODE,
-                    .mosi = GPIO_MOTOR_SENSOR_SPI_CS,
+                    .mosi = GPIO_MOTOR_SENSOR_SPI_MOSI,
                     .miso = GPIO_MOTOR_SENSOR_SPI_MISO,
                     .sclk = GPIO_MOTOR_SENSOR_SPI_SCLK,
                     .cs = GPIO_MOTOR_SENSOR_SPI_CS },
@@ -32,9 +34,17 @@ MotorSensorConfig motor_sensor_config = {
 
 void pre_loop_init() {}
 
-void run_fast_cycle() {
-  mlx90382_run();
-  sp3485_run();
+TASK(motor_sensor_task, TASK_STACK_512) {
+  motor_sensor_init(&motor_sensor_storage, &motor_sensor_config);
+  // Add a delay here?
+  while (true) {
+    mlx90382_run();
+    thermistor_run();
+    sp3485_run();
+    // LOG_DEBUG("MOT: %u | THERM: %u\r\n", motor_sensor_storage.mlx903_reading,
+    //           motor_sensor_storage.thermistor_reading);
+    delay_ms(10U);
+  }
 }
 
 void run_medium_cycle() {}
@@ -46,9 +56,7 @@ int main() {
   log_init();
   gpio_init();
 
-  init_master_task();
-
-  motor_sensor_init(&motor_sensor_storage, &motor_sensor_config);
+  tasks_init_task(motor_sensor_task, TASK_PRIORITY(2), NULL);
 
   tasks_start();
 
