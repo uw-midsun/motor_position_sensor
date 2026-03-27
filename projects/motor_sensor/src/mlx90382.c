@@ -90,7 +90,9 @@ StatusCode mlx90382_run() {
 
   status = spi_exchange(MOTOR_SENSOR_SPI_PORT, tx_buffer, 5U, rx_buffer, 5U);
   if (status != STATUS_CODE_OK) {
+#if (MLX_DEBUG == 1U)
     LOG_DEBUG("SPI transaction failed %d\r\n", status);
+#endif
     return status;
   }
 

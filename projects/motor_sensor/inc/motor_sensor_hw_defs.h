@@ -6,8 +6,7 @@
 
 /* Intra-component Headers */
 
-#define MOTOR_SENSOR_GPIO_DEF(PORT, PIN) \
-  { .port = GPIO_PORT_##PORT, .pin = PIN }
+#define MOTOR_SENSOR_GPIO_DEF(PORT, PIN) { .port = GPIO_PORT_##PORT, .pin = PIN }
 
 /************************************************************************************************
  * Motor Sensor UART definitions - for RS485 bridge
@@ -23,7 +22,7 @@
 
 #define MOTOR_SENSOR_UART_PORT UART_PORT_2
 
-#define MOTOR_SENSOR_UART_BAUDRATE 115200
+#define MOTOR_SENSOR_UART_BAUDRATE 470600
 
 /************************************************************************************************
  * Motor Sensor SPI definitions - for MLX magnetic sensor

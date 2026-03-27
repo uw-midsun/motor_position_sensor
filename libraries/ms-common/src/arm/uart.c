@@ -125,6 +125,11 @@ StatusCode uart_rx(UartPort uart, uint8_t *data, size_t *len) {
   return STATUS_CODE_OK;
 }
 
+StatusCode uart_send_break(UartPort uart) {
+  USART_SendBreak(s_port[uart].base);
+  return STATUS_CODE_OK;
+}
+
 static void prv_handle_irq(UartPort uart) {
   // Check that the transmit data register is empty
   if (USART_GetITStatus(s_port[uart].base, USART_IT_TXE) == SET) {

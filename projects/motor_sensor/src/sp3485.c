@@ -28,18 +28,38 @@ StatusCode sp3485_init(MotorSensorStorage *storage) {
   return STATUS_CODE_OK;
 }
 
-StatusCode sp3485_run() {
+StatusCode sp3485_report_device_type() {
   uint8_t tx_buf[4U];
 
-  tx_buf[0U] = (0b11 << 6) | ((s_motor_sensor_storage->thermistor_reading >> 10) & MASK_6B);
-  tx_buf[1U] = ((s_motor_sensor_storage->thermistor_reading >> 3) & MASK_7B);
-  tx_buf[2U] = (s_motor_sensor_storage->mlx903_reading >> 2) & MASK_7B;
-  tx_buf[3U] = (s_motor_sensor_storage->mlx903_reading >> 9) & MASK_7B;
+  uint16_t device_type = WS22_SENSOR_DEVICE_TYPE;
+
+  tx_buf[0U] = (0b10 << 6) | (WS22_SENSOR_DEVICE_TYPE & MASK_6B);
+  tx_buf[1U] = 0;
+  tx_buf[2U] = ((s_motor_sensor_storage->mlx903_reading >> 2) >> 7) & MASK_7B;
+  tx_buf[3U] = (s_motor_sensor_storage->mlx903_reading >> 2) & MASK_7B;
 
 #if (SP3485_DEBUG == 1)
   LOG_DEBUG("tx bytes: %d | %d | %d | %d |\r\n", tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3]);
 #endif
   uart_tx(MOTOR_SENSOR_UART_PORT, tx_buf, &uart_tx_length);
+  uart_send_break(MOTOR_SENSOR_UART_PORT);
+
+  return STATUS_CODE_OK;
+}
+
+StatusCode sp3485_run() {
+  uint8_t tx_buf[4U];
+
+  tx_buf[0U] = (0b11 << 6) | ((s_motor_sensor_storage->thermistor_reading >> 10) & MASK_6B);
+  tx_buf[1U] = ((s_motor_sensor_storage->thermistor_reading >> 3) & MASK_7B);
+  tx_buf[2U] = ((s_motor_sensor_storage->mlx903_reading >> 2) >> 7) & MASK_7B;
+  tx_buf[3U] = (s_motor_sensor_storage->mlx903_reading >> 2) & MASK_7B;
+
+#if (SP3485_DEBUG == 1)
+  LOG_DEBUG("tx bytes: %d | %d | %d | %d |\r\n", tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3]);
+#endif
+  uart_tx(MOTOR_SENSOR_UART_PORT, tx_buf, &uart_tx_length);
+  uart_send_break(MOTOR_SENSOR_UART_PORT);
 
   return STATUS_CODE_OK;
 }

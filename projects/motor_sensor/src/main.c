@@ -32,6 +32,8 @@ MotorSensorConfig motor_sensor_config = {
                     .cs = GPIO_MOTOR_SENSOR_SPI_CS },
 };
 
+static uint8_t cycle_count = 0;
+
 void pre_loop_init() {}
 
 TASK(motor_sensor_task, TASK_STACK_512) {
@@ -40,10 +42,13 @@ TASK(motor_sensor_task, TASK_STACK_512) {
   while (true) {
     mlx90382_run();
     thermistor_run();
-    sp3485_run();
-    // LOG_DEBUG("MOT: %u | THERM: %u\r\n", motor_sensor_storage.mlx903_reading,
-    //           motor_sensor_storage.thermistor_reading);
-    delay_ms(10U);
+    if (cycle_count == 100) {
+      cycle_count = 0;
+      sp3485_report_device_type();
+    } else {
+      sp3485_run();
+    }
+    cycle_count++;
   }
 }
 
@@ -53,7 +58,7 @@ void run_slow_cycle() {}
 
 int main() {
   tasks_init();
-  log_init();
+  // log_init();
   gpio_init();
 
   tasks_init_task(motor_sensor_task, TASK_PRIORITY(2), NULL);
