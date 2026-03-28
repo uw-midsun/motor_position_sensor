@@ -58,7 +58,11 @@ void run_slow_cycle() {}
 
 int main() {
   tasks_init();
-  // log_init();
+  
+#if (MOTOR_DEBUG == 1U)
+  log_init();
+#endif
+
   gpio_init();
 
   tasks_init_task(motor_sensor_task, TASK_PRIORITY(2), NULL);

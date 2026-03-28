@@ -64,6 +64,7 @@ StatusCode uart_init(UartPort uart, UartSettings *settings) {
   USART_StructInit(&usart_init);
   usart_init.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
   usart_init.USART_BaudRate = settings->baudrate;
+  usart_init.USART_StopBits = 1;
   USART_Init(s_port[uart].base, &usart_init);
 
   // ITPendingBit is cleared once a pending interrupt has been serviced
@@ -126,7 +127,17 @@ StatusCode uart_rx(UartPort uart, uint8_t *data, size_t *len) {
 }
 
 StatusCode uart_send_break(UartPort uart) {
+  if (!s_port[uart].initialized) {
+    return STATUS_CODE_INVALID_ARGS;
+  }
+
+  /* Wait until the software TX queue has been fully drained by the ISR */
+  while (queue_get_spaces_available(&s_port_queues[uart].tx_queue) !=
+         queue_get_num_items(&s_port_queues[uart].tx_queue)) {
+  }
+  
   USART_SendBreak(s_port[uart].base);
+  
   return STATUS_CODE_OK;
 }
 

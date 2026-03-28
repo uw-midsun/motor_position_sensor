@@ -2,6 +2,7 @@
 
 /* Inter-component Headers */
 #include "log.h"
+#include "delay.h"
 
 /* Intra-component Headers */
 #include "mlx90382.h"
@@ -10,8 +11,6 @@
 
 static MotorSensorStorage *s_motor_sensor_storage;
 static StatusCode status = STATUS_CODE_OK;
-
-#define MLX_DEBUG 0U
 
 static StatusCode register_read(Mlx90382Registers addr, uint16_t *out) {
   if (addr > MLX90382_MAX_REG_ADDR) {
@@ -90,7 +89,7 @@ StatusCode mlx90382_run() {
 
   status = spi_exchange(MOTOR_SENSOR_SPI_PORT, tx_buffer, 5U, rx_buffer, 5U);
   if (status != STATUS_CODE_OK) {
-#if (MLX_DEBUG == 1U)
+#if (MOTOR_DEBUG == 1U)
     LOG_DEBUG("SPI transaction failed %d\r\n", status);
 #endif
     return status;
@@ -98,7 +97,7 @@ StatusCode mlx90382_run() {
 
   s_motor_sensor_storage->mlx903_reading = (uint16_t)((rx_buffer[4U] << 8) | rx_buffer[3U]);
 
-#if (MLX_DEBUG == 1U)
+#if (MOTOR_DEBUG == 1U)
   LOG_DEBUG("Reading: %u\r\n", s_motor_sensor_storage->mlx903_reading);
 #endif
 
