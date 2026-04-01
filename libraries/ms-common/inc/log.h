@@ -41,10 +41,8 @@ extern UartSettings log_uart_settings;
 #define LOG_CRITICAL(fmt, ...) LOG(LOG_LEVEL_CRITICAL, fmt, ##__VA_ARGS__)
 
 #ifdef MS_PLATFORM_X86
-#define log_init()            \
-  {                           \
-    mutex_init(&s_log_mutex); \
-  }
+#define log_init() \
+  { mutex_init(&s_log_mutex); }
 #else
 #define log_init()                           \
   {                                          \

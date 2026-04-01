@@ -67,7 +67,7 @@ StatusCode spi_init(SpiPort spi, const SpiSettings *settings) {
   s_port[spi].cs = settings->cs;
 
   // Confifgure spi pins to correct modes
-  gpio_init_pin(&settings->miso, GPIO_INPUT_FLOATING, GPIO_STATE_LOW);
+  gpio_init_pin(&settings->miso, GPIO_ALTFN_PUSH_PULL, GPIO_STATE_LOW);
   gpio_init_pin(&settings->mosi, GPIO_ALTFN_PUSH_PULL, GPIO_STATE_LOW);
   gpio_init_pin(&settings->sclk, GPIO_ALTFN_PUSH_PULL, GPIO_STATE_LOW);
   gpio_init_pin(&settings->cs, GPIO_OUTPUT_PUSH_PULL, GPIO_STATE_HIGH);

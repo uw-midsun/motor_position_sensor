@@ -35,3 +35,5 @@ StatusCode uart_rx(UartPort uart, uint8_t *data, size_t *len);
 // If less than |*len| sent, it is updated to total bytes sent.
 // This method should not be called from more than one task for the same port
 StatusCode uart_tx(UartPort uart, uint8_t *data, size_t *len);
+
+StatusCode uart_send_break(UartPort uart);
