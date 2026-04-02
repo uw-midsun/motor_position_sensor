@@ -37,11 +37,20 @@ static uint8_t cycle_count = 0;
 void pre_loop_init() {}
 
 TASK(motor_sensor_task, TASK_STACK_512) {
-  motor_sensor_init(&motor_sensor_storage, &motor_sensor_config);
   // Add a delay here?
+  delay_ms(100U);
+
   while (true) {
     mlx90382_run();
     thermistor_run();
+    delay_ms(10U);
+  }
+}
+
+TASK(motor_sensor_uart_task, TASK_STACK_512) {
+  motor_sensor_init(&motor_sensor_storage, &motor_sensor_config);
+
+  while (true) {
     if (cycle_count == 100) {
       cycle_count = 0;
       sp3485_report_device_type();
@@ -52,20 +61,17 @@ TASK(motor_sensor_task, TASK_STACK_512) {
   }
 }
 
-void run_medium_cycle() {}
-
-void run_slow_cycle() {}
-
 int main() {
   tasks_init();
-  
+
 #if (MOTOR_DEBUG == 1U)
   log_init();
 #endif
 
   gpio_init();
 
-  tasks_init_task(motor_sensor_task, TASK_PRIORITY(2), NULL);
+  tasks_init_task(motor_sensor_task, TASK_PRIORITY(3), NULL);
+  tasks_init_task(motor_sensor_uart_task, TASK_PRIORITY(3), NULL);
 
   tasks_start();
 
