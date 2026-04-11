@@ -303,8 +303,8 @@ static void ws22_build_device_type_packet(uint8_t *packet, uint16_t angle_raw) {
 static void ws22_build_data_packet(uint8_t *packet, uint16_t thermistor_raw, uint16_t angle_raw) {
   uint16_t angle_14b = (uint16_t)(angle_raw >> 2U);
 
-  packet[0U] = (uint8_t)((0x03U << 6U) | ((thermistor_raw >> 10U) & MASK_6B));
-  packet[1U] = (uint8_t)((thermistor_raw >> 3U) & MASK_7B);
+  packet[0U] = (uint8_t)((0x03U << 6U) | ((thermistor_raw >> 6U) & MASK_6B));
+  packet[1U] = (uint8_t)((thermistor_raw << 1U) & MASK_7B);
   packet[2U] = (uint8_t)((angle_14b >> 7U) & MASK_7B);
   packet[3U] = (uint8_t)(angle_14b & MASK_7B);
 }
