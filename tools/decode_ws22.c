@@ -166,14 +166,14 @@ static void decode_packet(const uint8_t *pkt, unsigned long *count)
     if (!is_temp) {
         uint8_t dev = pkt[0] & 0x3F;
         printf("[DEVICE TYPE] dev=%u (%s)\n", dev, device_type_str(dev));
-        printf("              angle_14b=0x%04X  angle_raw=0x%04X  %.2f deg\n",
+        printf("              angle_14b=0x%04X  angle_raw=0x%04X  %6.2f deg\n",
                angle_14b, angle_raw, angle_deg);
     } else {
         uint16_t temp_13b   = (uint16_t)(((pkt[0] & 0x3F) << 7) | (pkt[1] & 0x7F));
         uint16_t adc_raw    = temp_13b >> 1;
         float    temp_c     = thermistor_to_celsius(adc_raw);
         printf("[DATA]        temp_raw=%-5u  temp=%.1f°C  "
-               "angle_14b=0x%04X  angle_raw=0x%04X  %.2f deg\n",
+               "angle_14b=0x%04X  angle_raw=0x%04X  %6.2f deg\n",
                adc_raw, temp_c, angle_14b, angle_raw, angle_deg);
     }
     fflush(stdout);
