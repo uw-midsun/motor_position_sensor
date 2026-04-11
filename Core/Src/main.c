@@ -229,7 +229,7 @@ static HAL_StatusTypeDef mlx90382_init(void) {
 }
 
 static uint16_t mlx90382_parse_frame_word(const uint8_t *frame) {
-  return (uint16_t)(((uint16_t)frame[4U] << 8U) | frame[3U]);
+  return (uint16_t)(((uint16_t)frame[3U] << 8U) | frame[4U]);
 }
 
 static HAL_StatusTypeDef mlx90382_start_frame_dma(void) {
