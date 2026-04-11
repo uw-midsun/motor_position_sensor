@@ -1,0 +1,13 @@
+# Build output
+Debug/
+Release/
+
+# STM32CubeIDE backup files
+Core/Inc/Backup/
+Core/Src/Backup/
+
+# IDE settings
+.settings/
+
+# Debug launch configurations
+*.launch
