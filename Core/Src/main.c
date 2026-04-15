@@ -94,16 +94,6 @@ typedef enum {
 #define MLX90382_SC_Y2_FULL_RANGE 0xFFFDU
 #define MLX90382_SC_YE_FULL_RANGE 0xFFFEU
 
-#define MLX90382_REG_DE_SR_NVRAM 0x025CU
-#define MLX90382_REG_S_IQ_NVRAM 0x021CU
-#define MLX90382_REG_S_QQ_NVRAM 0x021EU
-/* DE_DSP_RMM occupies bits [8:7] of DE_SR. Setting both disables adaptive
- * sensitivity / orthogonality correction so the baked S_IQ / S_QQ stand. */
-#define MLX90382_DE_DSP_RMM_MASK ((uint16_t)(0x3U << 7))
-/* Sensitivity / orthogonality coefficients from the EoL self-cal run. */
-#define MLX90382_S_QQ_VALUE 0x5C5CU
-#define MLX90382_S_IQ_VALUE 0xEA36U
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -278,21 +268,6 @@ static HAL_StatusTypeDef mlx90382_init(void) {
   if (hal_status != HAL_OK) return hal_status;
   hal_status = mlx90382_nvram_write_verify(MLX90382_REG_SC_YE,
                                            MLX90382_SC_YE_FULL_RANGE);
-  if (hal_status != HAL_OK) return hal_status;
-
-  uint16_t de_sr_nvram = 0U;
-  hal_status = mlx90382_register_read(MLX90382_REG_DE_SR_NVRAM, &de_sr_nvram);
-  if (hal_status != HAL_OK) return hal_status;
-  de_sr_nvram |= MLX90382_DE_DSP_RMM_MASK;
-  hal_status =
-      mlx90382_nvram_write_verify(MLX90382_REG_DE_SR_NVRAM, de_sr_nvram);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_S_QQ_NVRAM,
-                                           MLX90382_S_QQ_VALUE);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_S_IQ_NVRAM,
-                                           MLX90382_S_IQ_VALUE);
   if (hal_status != HAL_OK) return hal_status;
 
   hal_status = mlx90382_register_write(MLX90382_REG_CRC_CTRL, 0x0001U);
