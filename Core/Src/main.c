@@ -172,6 +172,9 @@ static HAL_StatusTypeDef mlx90382_register_write(uint16_t reg_addr,
                                                  uint16_t data);
 static HAL_StatusTypeDef mlx90382_nvram_write_verify(uint16_t reg_addr,
                                                      uint16_t data);
+static HAL_StatusTypeDef mlx90382_nvram_write_if_changed(uint16_t reg_addr,
+                                                         uint16_t data,
+                                                         bool *wrote);
 static HAL_StatusTypeDef mlx90382_init(void);
 static uint16_t mlx90382_parse_frame_word(const uint8_t *frame);
 static HAL_StatusTypeDef mlx90382_start_frame_dma(void);
@@ -266,11 +269,24 @@ static HAL_StatusTypeDef mlx90382_nvram_write_verify(uint16_t reg_addr,
   return (verify == data) ? HAL_OK : HAL_ERROR;
 }
 
+static HAL_StatusTypeDef mlx90382_nvram_write_if_changed(uint16_t reg_addr,
+                                                         uint16_t data,
+                                                         bool *wrote) {
+  HAL_StatusTypeDef hal_status;
+  uint16_t current = 0U;
+  hal_status = mlx90382_register_read(reg_addr, &current);
+  if (hal_status != HAL_OK) return hal_status;
+  if (current == data) return HAL_OK;
+  *wrote = true;
+  return mlx90382_nvram_write_verify(reg_addr, data);
+}
+
 static HAL_StatusTypeDef mlx90382_init(void) {
   HAL_StatusTypeDef hal_status;
   uint16_t config_reg = 0U;
   uint16_t crc_status = 0U;
   uint16_t crc = 0U;
+  bool nvram_changed = false;
 
   hal_status =
       mlx90382_nvram_write_verify(MLX90382_REG_DE_SR, MLX90382_DE_SR_DISABLE);
@@ -286,24 +302,31 @@ static HAL_StatusTypeDef mlx90382_init(void) {
   config_reg |= MLX90382_SENSING_MODE_YZ;
   config_reg &= (uint16_t)~MLX90382_CONFIG_GPIO_IF_MASK;
   config_reg |= MLX90382_GPIO_IF_SPI_BUS;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_CONFIG, config_reg);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_CONFIG, config_reg,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
 
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_FADDR01, 0x0000U);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_FADDR01, 0x0000U,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_FADDR23, 0x0000U);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_FADDR23, 0x0000U,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_FR_CONFIG,
-                                           MLX90382_FR_CONFIG_5BYTE_FRAME);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_FR_CONFIG,
+                                               MLX90382_FR_CONFIG_5BYTE_FRAME,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_SC_Y1,
-                                           MLX90382_SC_Y1_FULL_RANGE);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_SC_Y1,
+                                               MLX90382_SC_Y1_FULL_RANGE,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_SC_Y2,
-                                           MLX90382_SC_Y2_FULL_RANGE);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_SC_Y2,
+                                               MLX90382_SC_Y2_FULL_RANGE,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_SC_YE,
-                                           MLX90382_SC_YE_FULL_RANGE);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_SC_YE,
+                                               MLX90382_SC_YE_FULL_RANGE,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
 
   {
@@ -311,63 +334,76 @@ static HAL_StatusTypeDef mlx90382_init(void) {
     hal_status = mlx90382_register_read(MLX90382_REG_DISABLE_CFG, &de_cfg);
     if (hal_status != HAL_OK) return hal_status;
     de_cfg &= (uint16_t)~MLX90382_DE_DSP_RMM_MASK;
-    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_DISABLE_CFG, de_cfg);
+    hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_DISABLE_CFG,
+                                                 de_cfg, &nvram_changed);
     if (hal_status != HAL_OK) return hal_status;
   }
 
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_RMM_CFG,
-                                           MLX90382_RMM_CFG_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_RMM_CFG,
+                                               MLX90382_RMM_CFG_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
 
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ_GAIN,
-                                           MLX90382_PEQ_GAIN_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ_GAIN,
+                                               MLX90382_PEQ_GAIN_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ00_01,
-                                           MLX90382_PEQ00_01_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ00_01,
+                                               MLX90382_PEQ00_01_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ02_03,
-                                           MLX90382_PEQ02_03_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ02_03,
+                                               MLX90382_PEQ02_03_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ04_05,
-                                           MLX90382_PEQ04_05_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ04_05,
+                                               MLX90382_PEQ04_05_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ06_07,
-                                           MLX90382_PEQ06_07_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ06_07,
+                                               MLX90382_PEQ06_07_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ08_09,
-                                           MLX90382_PEQ08_09_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ08_09,
+                                               MLX90382_PEQ08_09_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ10_11,
-                                           MLX90382_PEQ10_11_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ10_11,
+                                               MLX90382_PEQ10_11_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ12_13,
-                                           MLX90382_PEQ12_13_VAL);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ12_13,
+                                               MLX90382_PEQ12_13_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_PEQ14_15,
-                                           MLX90382_PEQ14_15_VAL);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status = mlx90382_register_write(MLX90382_REG_CRC_CTRL, 0x0001U);
-  if (hal_status != HAL_OK) return hal_status;
-  HAL_Delay(1U);  // >= 10 µs
-  hal_status = mlx90382_register_read(MLX90382_REG_CRC_CTRL, &crc_status);
-  if (hal_status != HAL_OK) return hal_status;
-  if (!(crc_status & 0x0002U)) return HAL_ERROR;  // CRC_CALC_DONE not set
-  hal_status = mlx90382_register_read(MLX90382_REG_CRC, &crc);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_CUS_CRC, crc);
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ14_15,
+                                               MLX90382_PEQ14_15_VAL,
+                                               &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
 
-  hal_status =
-      mlx90382_nvram_write_verify(MLX90382_REG_NVOP_KEY, MLX90382_NVOP_KEY_LO);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status =
-      mlx90382_nvram_write_verify(MLX90382_REG_NVOP_KEY, MLX90382_NVOP_KEY_HI);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status =
-      mlx90382_register_write(MLX90382_REG_NVM_CTRL, MLX90382_STORE_REQ);
-  if (hal_status != HAL_OK) return hal_status;
-  HAL_Delay(50U);  // >=15 ms for NVM write to complete
+  if (nvram_changed) {
+    hal_status = mlx90382_register_write(MLX90382_REG_CRC_CTRL, 0x0001U);
+    if (hal_status != HAL_OK) return hal_status;
+    HAL_Delay(1U);  // >= 10 µs
+    hal_status = mlx90382_register_read(MLX90382_REG_CRC_CTRL, &crc_status);
+    if (hal_status != HAL_OK) return hal_status;
+    if (!(crc_status & 0x0002U)) return HAL_ERROR;  // CRC_CALC_DONE not set
+    hal_status = mlx90382_register_read(MLX90382_REG_CRC, &crc);
+    if (hal_status != HAL_OK) return hal_status;
+    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_CUS_CRC, crc);
+    if (hal_status != HAL_OK) return hal_status;
+
+    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_NVOP_KEY,
+                                             MLX90382_NVOP_KEY_LO);
+    if (hal_status != HAL_OK) return hal_status;
+    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_NVOP_KEY,
+                                             MLX90382_NVOP_KEY_HI);
+    if (hal_status != HAL_OK) return hal_status;
+    hal_status =
+        mlx90382_register_write(MLX90382_REG_NVM_CTRL, MLX90382_STORE_REQ);
+    if (hal_status != HAL_OK) return hal_status;
+    HAL_Delay(50U);  // >=15 ms for NVM write to complete
+  }
 
   hal_status = mlx90382_register_write(MLX90382_REG_IN_APPLICATION, 0x0000U);
   if (hal_status != HAL_OK) return hal_status;
