@@ -94,6 +94,13 @@ typedef enum {
 #define MLX90382_SC_Y2_FULL_RANGE 0xFFFDU
 #define MLX90382_SC_YE_FULL_RANGE 0xFFFEU
 
+#define MLX90382_REG_DISABLE_CFG 0x025CU
+#define MLX90382_DE_DSP_RMM_MASK 0x0180U
+
+// FAST=1 [2:0], LFC=6 [5:3], AVG_MIN=1 [7:6], AVG_MAX=3 [9:8]
+#define MLX90382_REG_RMM_CFG 0x0256U
+#define MLX90382_RMM_CFG_VAL ((3U << 8U) | (1U << 6U) | (6U << 3U) | 1U)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -268,6 +275,19 @@ static HAL_StatusTypeDef mlx90382_init(void) {
   if (hal_status != HAL_OK) return hal_status;
   hal_status = mlx90382_nvram_write_verify(MLX90382_REG_SC_YE,
                                            MLX90382_SC_YE_FULL_RANGE);
+  if (hal_status != HAL_OK) return hal_status;
+
+  {
+    uint16_t de_cfg = 0U;
+    hal_status = mlx90382_register_read(MLX90382_REG_DISABLE_CFG, &de_cfg);
+    if (hal_status != HAL_OK) return hal_status;
+    de_cfg &= (uint16_t)~MLX90382_DE_DSP_RMM_MASK;
+    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_DISABLE_CFG, de_cfg);
+    if (hal_status != HAL_OK) return hal_status;
+  }
+
+  hal_status = mlx90382_nvram_write_verify(MLX90382_REG_RMM_CFG,
+                                           MLX90382_RMM_CFG_VAL);
   if (hal_status != HAL_OK) return hal_status;
 
   hal_status = mlx90382_register_write(MLX90382_REG_CRC_CTRL, 0x0001U);
