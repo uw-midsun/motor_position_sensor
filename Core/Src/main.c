@@ -18,6 +18,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "mlx90382.h"
+#include "ws22.h"
 #include <stdbool.h>
 #include <stdint.h>
 /* USER CODE END Includes */
@@ -34,11 +35,6 @@ typedef enum {
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define WS22_PACKET_SIZE 4U
-#define WS22_SENSOR_DEVICE_TYPE 5U
-
-#define MASK_6B 0x3FU
-#define MASK_7B 0x7FU
 
 #define MOTOR_SENSOR_UART_DE_Pin GPIO_PIN_1
 #define MOTOR_SENSOR_UART_DE_GPIO_Port GPIOA
@@ -61,18 +57,9 @@ typedef enum {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static uint8_t s_uart_packet_a[WS22_PACKET_SIZE];
-static uint8_t s_uart_packet_b[WS22_PACKET_SIZE];
-static uint8_t *volatile s_uart_tx_buffer = s_uart_packet_a;
-static uint8_t *volatile s_uart_fill_buffer = s_uart_packet_b;
-
-static volatile bool s_uart_tx_busy = false;
-static volatile bool s_uart_packet_pending = false;
 static volatile uint32_t s_uart_error_count = 0U;
 static volatile uint32_t s_adc_error_count = 0U;
 static volatile AppStatus s_app_status = APP_STATUS_OK;
-
-static bool s_device_type_sent = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,17 +68,12 @@ void SystemClock_Config(void);
 
 static HAL_StatusTypeDef thermistor_init(void);
 static uint16_t thermistor_read(void);
-
-static void ws22_build_device_type_packet(uint8_t *packet, uint16_t angle_raw);
-static void ws22_build_data_packet(uint8_t *packet, uint16_t thermistor_raw,
-                                   uint16_t angle_raw);
-static void ws22_queue_packet(const uint8_t *packet);
-static HAL_StatusTypeDef ws22_kick_tx(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+//? Move this to thermistor .h/c
 static HAL_StatusTypeDef thermistor_init(void) {
   ADC_ChannelConfTypeDef channel_config = {0};
 
@@ -131,70 +113,11 @@ static uint16_t thermistor_read(void) {
   }
 }
 
-static void ws22_build_device_type_packet(uint8_t *packet, uint16_t angle_raw) {
-  uint16_t angle_14b = (uint16_t)(angle_raw >> 2U);
-
-  packet[0U] = (uint8_t)((0x02U << 6U) | (WS22_SENSOR_DEVICE_TYPE & MASK_6B));
-  packet[1U] = 0x00U;
-  packet[2U] = (uint8_t)((angle_14b >> 7U) & MASK_7B);
-  packet[3U] = (uint8_t)(angle_14b & MASK_7B);
-}
-
-static void ws22_build_data_packet(uint8_t *packet, uint16_t thermistor_raw,
-                                   uint16_t angle_raw) {
-  uint16_t angle_14b = (uint16_t)(angle_raw >> 2U);
-
-  packet[0U] = (uint8_t)((0x03U << 6U) | ((thermistor_raw >> 6U) & MASK_6B));
-  packet[1U] = (uint8_t)((thermistor_raw << 1U) & MASK_7B);
-  packet[2U] = (uint8_t)((angle_14b >> 7U) & MASK_7B);
-  packet[3U] = (uint8_t)(angle_14b & MASK_7B);
-}
-
-static void ws22_queue_packet(const uint8_t *packet) {
-  uint32_t index;
-
-  __disable_irq();
-  for (index = 0U; index < WS22_PACKET_SIZE; ++index) {
-    s_uart_fill_buffer[index] = packet[index];
-  }
-  s_uart_packet_pending = true;
-  __enable_irq();
-}
-
-static HAL_StatusTypeDef ws22_kick_tx(void) {
-  HAL_StatusTypeDef hal_status = HAL_OK;
-  uint8_t *next_buffer = NULL;
-
-  __disable_irq();
-  if (!s_uart_tx_busy && s_uart_packet_pending) {
-    uint8_t *previous_tx_buffer = (uint8_t *)s_uart_tx_buffer;
-
-    s_uart_tx_buffer = s_uart_fill_buffer;
-    s_uart_fill_buffer = previous_tx_buffer;
-    s_uart_packet_pending = false;
-    s_uart_tx_busy = true;
-    next_buffer = (uint8_t *)s_uart_tx_buffer;
-  }
-  __enable_irq();
-
-  if (next_buffer != NULL) {
-    hal_status = HAL_UART_Transmit_IT(&huart2, next_buffer, WS22_PACKET_SIZE);
-    if (hal_status != HAL_OK) {
-      __disable_irq();
-      s_uart_tx_busy = false;
-      __enable_irq();
-    }
-  }
-
-  return hal_status;
-}
-
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
     HAL_StatusTypeDef hal_status;
 
-    s_uart_tx_busy = false;
-    hal_status = ws22_kick_tx();
+    hal_status = ws22_handle_uart_tx_complete(huart);
     if (hal_status != HAL_OK) {
       s_uart_error_count++;
       s_app_status = APP_STATUS_UART_ERROR;
@@ -204,7 +127,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
-    s_uart_tx_busy = false;
+    ws22_handle_uart_error(huart);
     s_uart_error_count++;
     s_app_status = APP_STATUS_UART_ERROR;
   }
@@ -262,6 +185,10 @@ int main(void) {
     Error_Handler();
   }
 
+  if (ws22_init() != HAL_OK) {
+    Error_Handler();
+  }
+
   if (mlx90382_init() != HAL_OK) {
     Error_Handler();
   }
@@ -280,20 +207,11 @@ int main(void) {
     uint16_t angle_raw;
 
     if (mlx90382_take_reading(&angle_raw)) {
-      uint8_t local_packet[WS22_PACKET_SIZE];
       uint16_t thermistor_raw;
 
       thermistor_raw = thermistor_read();
 
-      if (!s_device_type_sent) {
-        ws22_build_device_type_packet(local_packet, angle_raw);
-        s_device_type_sent = true;
-      } else {
-        ws22_build_data_packet(local_packet, thermistor_raw, angle_raw);
-      }
-
-      ws22_queue_packet(local_packet);
-      if (ws22_kick_tx() != HAL_OK) {
+      if (ws22_send_measurement(thermistor_raw, angle_raw) != HAL_OK) {
         s_uart_error_count++;
         s_app_status = APP_STATUS_UART_ERROR;
       }
