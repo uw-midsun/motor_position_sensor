@@ -18,6 +18,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "mlx90382.h"
+#include "thermistor.h"
 #include "ws22.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -41,11 +42,8 @@ typedef enum {
 #define MOTOR_SENSOR_UART_NRE_Pin GPIO_PIN_4
 #define MOTOR_SENSOR_UART_NRE_GPIO_Port GPIOA
 
-#define THERMISTOR_ADC_CHANNEL ADC_CHANNEL_9
-
 #define SPI_TIMEOUT_MS 10U
 #define UART_TIMEOUT_MS 10U
-#define ADC_TIMEOUT_MS 10U
 
 /* USER CODE END PD */
 
@@ -66,52 +64,10 @@ static volatile AppStatus s_app_status = APP_STATUS_OK;
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
-static HAL_StatusTypeDef thermistor_init(void);
-static uint16_t thermistor_read(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-//? Move this to thermistor .h/c
-static HAL_StatusTypeDef thermistor_init(void) {
-  ADC_ChannelConfTypeDef channel_config = {0};
-
-  channel_config.Channel = THERMISTOR_ADC_CHANNEL;
-  channel_config.Rank = ADC_REGULAR_RANK_1;
-  channel_config.SamplingTime = ADC_SAMPLETIME_71CYCLES_5;
-
-  if (HAL_ADC_ConfigChannel(&hadc1, &channel_config) != HAL_OK) {
-    return HAL_ERROR;
-  }
-
-  if (HAL_ADCEx_Calibration_Start(&hadc1) != HAL_OK) {
-    return HAL_ERROR;
-  }
-
-  return HAL_OK;
-}
-
-static uint16_t thermistor_read(void) {
-  if (HAL_ADC_Start(&hadc1) != HAL_OK) {
-    s_adc_error_count++;
-    s_app_status = APP_STATUS_ADC_ERROR;
-    return 0U;
-  }
-
-  if (HAL_ADC_PollForConversion(&hadc1, ADC_TIMEOUT_MS) != HAL_OK) {
-    (void)HAL_ADC_Stop(&hadc1);
-    s_adc_error_count++;
-    s_app_status = APP_STATUS_ADC_ERROR;
-    return 0U;
-  }
-
-  {
-    uint16_t adc_value = (uint16_t)HAL_ADC_GetValue(&hadc1);
-    (void)HAL_ADC_Stop(&hadc1);
-    return adc_value;
-  }
-}
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
@@ -200,6 +156,7 @@ int main(void) {
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint16_t thermistor_raw = 0U;
   while (1) {
     /* USER CODE END WHILE */
 
@@ -207,9 +164,10 @@ int main(void) {
     uint16_t angle_raw;
 
     if (mlx90382_take_reading(&angle_raw)) {
-      uint16_t thermistor_raw;
-
-      thermistor_raw = thermistor_read();
+      if (!thermistor_read(&thermistor_raw)) {
+        s_adc_error_count++;
+        s_app_status = APP_STATUS_ADC_ERROR;
+      }
 
       if (ws22_send_measurement(thermistor_raw, angle_raw) != HAL_OK) {
         s_uart_error_count++;
