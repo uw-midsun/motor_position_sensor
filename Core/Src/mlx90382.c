@@ -241,6 +241,15 @@ HAL_StatusTypeDef mlx90382_init(void) {
                                                &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
 
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_S_IQ,
+                                               MLX90382_S_IQ_VAL,
+                                               &nvram_changed);
+  if (hal_status != HAL_OK) return hal_status;
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_S_QQ,
+                                               MLX90382_S_QQ_VAL,
+                                               &nvram_changed);
+  if (hal_status != HAL_OK) return hal_status;
+
   if (nvram_changed) {
     hal_status = mlx90382_register_write(MLX90382_REG_CRC_CTRL, 0x0001U);
     if (hal_status != HAL_OK) return hal_status;
