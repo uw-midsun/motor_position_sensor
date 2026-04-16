@@ -101,8 +101,13 @@ typedef enum {
 #define MLX90382_REG_RMM_CFG 0x0256U
 #define MLX90382_RMM_CFG_VAL ((3U << 8U) | (1U << 6U) | (6U << 3U) | 1U)
 
+#define MLX90382_REG_S_IQ  0x021CU
+#define MLX90382_REG_S_QQ  0x021EU
+#define MLX90382_S_IQ_VAL  0x010DU
+#define MLX90382_S_QQ_VAL  0x5BE4U
+
 #define MLX90382_REG_PEQ_GAIN 0x020AU
-#define MLX90382_PEQ_GAIN_VAL 0x0005U  // gain = 5
+#define MLX90382_PEQ_GAIN_VAL 2U  // gain = 2
 
 #define MLX90382_REG_PEQ00_01 0x020CU
 #define MLX90382_REG_PEQ02_03 0x020EU
@@ -113,22 +118,22 @@ typedef enum {
 #define MLX90382_REG_PEQ12_13 0x0218U
 #define MLX90382_REG_PEQ14_15 0x021AU
 
-// PEQ00=0xF8, PEQ01=0x45
-#define MLX90382_PEQ00_01_VAL 0x45F8U
-// PEQ02=0x5E, PEQ03=0x45
-#define MLX90382_PEQ02_03_VAL 0x455EU
-// PEQ04=0x03, PEQ05=0xBF
-#define MLX90382_PEQ04_05_VAL 0xBF03U
-// PEQ06=0xA2, PEQ07=0xB4
-#define MLX90382_PEQ06_07_VAL 0xB4A2U
-// PEQ08=0xFF, PEQ09=0x4B
-#define MLX90382_PEQ08_09_VAL 0x4BFFU
-// PEQ10=0x63, PEQ11=0x49
-#define MLX90382_PEQ10_11_VAL 0x4963U
-// PEQ12=0x04, PEQ13=0xBF
-#define MLX90382_PEQ12_13_VAL 0xBF04U
-// PEQ14=0xA0, PEQ15=0xAF
-#define MLX90382_PEQ14_15_VAL 0xAFA0U
+// PEQ00=-50=0xCE, PEQ01=-13=0xF3
+#define MLX90382_PEQ00_01_VAL 0xF3CEU
+// PEQ02=-10=0xF6, PEQ03=+27=0x1B
+#define MLX90382_PEQ02_03_VAL 0x1BF6U
+// PEQ04=+35=0x23, PEQ05=-44=0xD4
+#define MLX90382_PEQ04_05_VAL 0xD423U
+// PEQ06= -6=0xFA, PEQ07= +4=0x04
+#define MLX90382_PEQ06_07_VAL 0x04FAU
+// PEQ08= -2=0xFE, PEQ09=+42=0x2A
+#define MLX90382_PEQ08_09_VAL 0x2AFEU
+// PEQ10=+48=0x30, PEQ11=+65=0x41
+#define MLX90382_PEQ10_11_VAL 0x4130U
+// PEQ12=+29=0x1D, PEQ13=-52=0xCC
+#define MLX90382_PEQ12_13_VAL 0xCC1DU
+// PEQ14=-37=0xDB, PEQ15=-35=0xDD
+#define MLX90382_PEQ14_15_VAL 0xDDDBU
 
 /* USER CODE END PD */
 
@@ -378,6 +383,15 @@ static HAL_StatusTypeDef mlx90382_init(void) {
   if (hal_status != HAL_OK) return hal_status;
   hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ14_15,
                                                MLX90382_PEQ14_15_VAL,
+                                               &nvram_changed);
+  if (hal_status != HAL_OK) return hal_status;
+
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_S_IQ,
+                                               MLX90382_S_IQ_VAL,
+                                               &nvram_changed);
+  if (hal_status != HAL_OK) return hal_status;
+  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_S_QQ,
+                                               MLX90382_S_QQ_VAL,
                                                &nvram_changed);
   if (hal_status != HAL_OK) return hal_status;
 
