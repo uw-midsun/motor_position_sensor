@@ -17,6 +17,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "mlx90382.h"
+#include "ws22.h"
 #include <stdbool.h>
 #include <stdint.h>
 /* USER CODE END Includes */
@@ -33,14 +35,6 @@ typedef enum {
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define WS22_PACKET_SIZE 4U
-#define WS22_SENSOR_DEVICE_TYPE 5U
-
-#define MASK_6B 0x3FU
-#define MASK_7B 0x7FU
-
-#define MLX90382_CS_Pin GPIO_PIN_12
-#define MLX90382_CS_GPIO_Port GPIOB
 
 #define MOTOR_SENSOR_UART_DE_Pin GPIO_PIN_1
 #define MOTOR_SENSOR_UART_DE_GPIO_Port GPIOA
@@ -53,88 +47,6 @@ typedef enum {
 #define UART_TIMEOUT_MS 10U
 #define ADC_TIMEOUT_MS 10U
 
-#define MLX90382_RR_BASE 0xCCU
-#define MLX90382_RW_BASE 0x78U
-#define MLX90382_FR_COMMAND 0x00U
-
-#define MLX90382_MAX_REG_ADDR 0x025EU
-#define MLX90382_REG_CONFIG 0x0200U
-#define MLX90382_REG_FADDR01 0x0230U
-#define MLX90382_REG_FADDR23 0x0232U
-#define MLX90382_REG_FR_CONFIG 0x0234U
-
-#define MLX90382_CONFIG_SENSING_MODE_MASK 0x0007U
-#define MLX90382_CONFIG_GPIO_IF_MASK 0x0018U
-#define MLX90382_SENSING_MODE_YZ 0x0002U
-#define MLX90382_GPIO_IF_SPI_BUS 0x0010U
-
-#define MLX90382_FR_PATTERN 0x000AU
-#define MLX90382_FR_FS_ENABLE 0x0010U
-#define MLX90382_FR_CONFIG_5BYTE_FRAME \
-  (MLX90382_FR_PATTERN | MLX90382_FR_FS_ENABLE)
-#define MLX90382_FRAME_TRANSFER_SIZE 5U
-
-#define MLX90382_REG_IN_APPLICATION 0x0024U
-#define MLX90382_REG_NVOP_KEY 0x0010U
-#define MLX90382_NVOP_KEY_LO 0x000BU
-#define MLX90382_NVOP_KEY_HI 0x0006U
-#define MLX90382_REG_DE_SR 0x00BEU
-#define MLX90382_DE_SR_DISABLE 0x0006U
-
-#define MLX90382_REG_CRC_CTRL 0x0028U
-#define MLX90382_REG_CRC 0x0026U
-#define MLX90382_REG_CUS_CRC 0x025EU
-#define MLX90382_REG_NVM_CTRL 0x0012U
-#define MLX90382_STORE_REQ 0x0100U
-
-#define MLX90382_REG_SC_Y1 0x0226U
-#define MLX90382_REG_SC_Y2 0x0228U
-#define MLX90382_REG_SC_YE 0x022AU
-#define MLX90382_SC_Y1_FULL_RANGE 0x0001U
-#define MLX90382_SC_Y2_FULL_RANGE 0xFFFDU
-#define MLX90382_SC_YE_FULL_RANGE 0xFFFEU
-
-#define MLX90382_REG_DISABLE_CFG 0x025CU
-#define MLX90382_DE_DSP_RMM_MASK 0x0180U
-
-// FAST=1 [2:0], LFC=6 [5:3], AVG_MIN=1 [7:6], AVG_MAX=3 [9:8]
-#define MLX90382_REG_RMM_CFG 0x0256U
-#define MLX90382_RMM_CFG_VAL ((3U << 8U) | (1U << 6U) | (6U << 3U) | 1U)
-
-#define MLX90382_REG_S_IQ  0x021CU
-#define MLX90382_REG_S_QQ  0x021EU
-#define MLX90382_S_IQ_VAL  0x010DU
-#define MLX90382_S_QQ_VAL  0x5BE4U
-
-#define MLX90382_REG_PEQ_GAIN 0x020AU
-#define MLX90382_PEQ_GAIN_VAL 2U  // gain = 2
-
-#define MLX90382_REG_PEQ00_01 0x020CU
-#define MLX90382_REG_PEQ02_03 0x020EU
-#define MLX90382_REG_PEQ04_05 0x0210U
-#define MLX90382_REG_PEQ06_07 0x0212U
-#define MLX90382_REG_PEQ08_09 0x0214U
-#define MLX90382_REG_PEQ10_11 0x0216U
-#define MLX90382_REG_PEQ12_13 0x0218U
-#define MLX90382_REG_PEQ14_15 0x021AU
-
-// PEQ00=-50=0xCE, PEQ01=-13=0xF3
-#define MLX90382_PEQ00_01_VAL 0xF3CEU
-// PEQ02=-10=0xF6, PEQ03=+27=0x1B
-#define MLX90382_PEQ02_03_VAL 0x1BF6U
-// PEQ04=+35=0x23, PEQ05=-44=0xD4
-#define MLX90382_PEQ04_05_VAL 0xD423U
-// PEQ06= -6=0xFA, PEQ07= +4=0x04
-#define MLX90382_PEQ06_07_VAL 0x04FAU
-// PEQ08= -2=0xFE, PEQ09=+42=0x2A
-#define MLX90382_PEQ08_09_VAL 0x2AFEU
-// PEQ10=+48=0x30, PEQ11=+65=0x41
-#define MLX90382_PEQ10_11_VAL 0x4130U
-// PEQ12=+29=0x1D, PEQ13=-52=0xCC
-#define MLX90382_PEQ12_13_VAL 0xCC1DU
-// PEQ14=-37=0xDB, PEQ15=-35=0xDD
-#define MLX90382_PEQ14_15_VAL 0xDDDBU
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -145,309 +57,23 @@ typedef enum {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static uint8_t s_spi_frame_tx[MLX90382_FRAME_TRANSFER_SIZE] = {
-    MLX90382_FR_COMMAND, 0x00U, 0x00U, 0x00U, 0x00U};
-static uint8_t s_spi_frame_rx[MLX90382_FRAME_TRANSFER_SIZE];
-static uint8_t s_uart_packet_a[WS22_PACKET_SIZE];
-static uint8_t s_uart_packet_b[WS22_PACKET_SIZE];
-static uint8_t *volatile s_uart_tx_buffer = s_uart_packet_a;
-static uint8_t *volatile s_uart_fill_buffer = s_uart_packet_b;
-
-static volatile bool s_spi_dma_busy = false;
-static volatile bool s_spi_dma_done = false;
-static volatile bool s_uart_tx_busy = false;
-static volatile bool s_uart_packet_pending = false;
-static volatile uint16_t s_mlx90382_reading = 0U;
-static volatile uint32_t s_spi_error_count = 0U;
 static volatile uint32_t s_uart_error_count = 0U;
 static volatile uint32_t s_adc_error_count = 0U;
 static volatile AppStatus s_app_status = APP_STATUS_OK;
-
-static bool s_device_type_sent = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-static void mlx90382_chip_select(bool selected);
-static uint16_t mlx90382_to_spi_addr(uint16_t reg_addr);
-static HAL_StatusTypeDef mlx90382_register_read(uint16_t reg_addr,
-                                                uint16_t *data);
-static HAL_StatusTypeDef mlx90382_register_write(uint16_t reg_addr,
-                                                 uint16_t data);
-static HAL_StatusTypeDef mlx90382_nvram_write_verify(uint16_t reg_addr,
-                                                     uint16_t data);
-static HAL_StatusTypeDef mlx90382_nvram_write_if_changed(uint16_t reg_addr,
-                                                         uint16_t data,
-                                                         bool *wrote);
-static HAL_StatusTypeDef mlx90382_init(void);
-static uint16_t mlx90382_parse_frame_word(const uint8_t *frame);
-static HAL_StatusTypeDef mlx90382_start_frame_dma(void);
 
 static HAL_StatusTypeDef thermistor_init(void);
 static uint16_t thermistor_read(void);
-
-static void ws22_build_device_type_packet(uint8_t *packet, uint16_t angle_raw);
-static void ws22_build_data_packet(uint8_t *packet, uint16_t thermistor_raw,
-                                   uint16_t angle_raw);
-static void ws22_queue_packet(const uint8_t *packet);
-static HAL_StatusTypeDef ws22_kick_tx(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void mlx90382_chip_select(bool selected) {
-  HAL_GPIO_WritePin(MLX90382_CS_GPIO_Port, MLX90382_CS_Pin,
-                    selected ? GPIO_PIN_RESET : GPIO_PIN_SET);
-}
 
-static uint16_t mlx90382_to_spi_addr(uint16_t reg_addr) {
-  return (uint16_t)(reg_addr >> 1U);
-}
-
-static HAL_StatusTypeDef mlx90382_register_read(uint16_t reg_addr,
-                                                uint16_t *data) {
-  HAL_StatusTypeDef hal_status;
-  uint16_t spi_addr;
-  uint8_t tx_buffer[5U];
-  uint8_t rx_buffer[5U];
-
-  if ((data == NULL) || (reg_addr > MLX90382_MAX_REG_ADDR)) {
-    return HAL_ERROR;
-  }
-
-  spi_addr = mlx90382_to_spi_addr(reg_addr);
-
-  tx_buffer[0U] = (uint8_t)(MLX90382_RR_BASE | ((spi_addr >> 8U) & 0x01U));
-  tx_buffer[1U] = (uint8_t)(spi_addr & 0xFFU);
-  tx_buffer[2U] = 0x00U;
-  tx_buffer[3U] = 0x00U;
-  tx_buffer[4U] = 0x00U;
-
-  mlx90382_chip_select(true);
-  hal_status = HAL_SPI_TransmitReceive(&hspi2, tx_buffer, rx_buffer,
-                                       sizeof(tx_buffer), SPI_TIMEOUT_MS);
-  mlx90382_chip_select(false);
-
-  if (hal_status != HAL_OK) {
-    return hal_status;
-  }
-
-  *data = (uint16_t)(((uint16_t)rx_buffer[3U] << 8U) | rx_buffer[4U]);
-  return HAL_OK;
-}
-
-static HAL_StatusTypeDef mlx90382_register_write(uint16_t reg_addr,
-                                                 uint16_t data) {
-  HAL_StatusTypeDef hal_status;
-  uint16_t spi_addr;
-  uint8_t tx_buffer[4U];
-  uint8_t rx_buffer[4U];
-
-  if (reg_addr > MLX90382_MAX_REG_ADDR) {
-    return HAL_ERROR;
-  }
-
-  spi_addr = mlx90382_to_spi_addr(reg_addr);
-
-  tx_buffer[0U] = (uint8_t)(MLX90382_RW_BASE | ((spi_addr >> 8U) & 0x01U));
-  tx_buffer[1U] = (uint8_t)(spi_addr & 0xFFU);
-  tx_buffer[2U] = (uint8_t)((data >> 8U) & 0xFFU);
-  tx_buffer[3U] = (uint8_t)(data & 0xFFU);
-
-  mlx90382_chip_select(true);
-  hal_status = HAL_SPI_TransmitReceive(&hspi2, tx_buffer, rx_buffer,
-                                       sizeof(tx_buffer), SPI_TIMEOUT_MS);
-  mlx90382_chip_select(false);
-
-  return hal_status;
-}
-
-static HAL_StatusTypeDef mlx90382_nvram_write_verify(uint16_t reg_addr,
-                                                     uint16_t data) {
-  HAL_StatusTypeDef hal_status;
-  uint16_t verify = 0U;
-  hal_status = mlx90382_register_write(reg_addr, data);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_register_read(reg_addr, &verify);
-  if (hal_status != HAL_OK) return hal_status;
-  return (verify == data) ? HAL_OK : HAL_ERROR;
-}
-
-static HAL_StatusTypeDef mlx90382_nvram_write_if_changed(uint16_t reg_addr,
-                                                         uint16_t data,
-                                                         bool *wrote) {
-  HAL_StatusTypeDef hal_status;
-  uint16_t current = 0U;
-  hal_status = mlx90382_register_read(reg_addr, &current);
-  if (hal_status != HAL_OK) return hal_status;
-  if (current == data) return HAL_OK;
-  *wrote = true;
-  return mlx90382_nvram_write_verify(reg_addr, data);
-}
-
-static HAL_StatusTypeDef mlx90382_init(void) {
-  HAL_StatusTypeDef hal_status;
-  uint16_t config_reg = 0U;
-  uint16_t crc_status = 0U;
-  uint16_t crc = 0U;
-  bool nvram_changed = false;
-
-  hal_status =
-      mlx90382_nvram_write_verify(MLX90382_REG_DE_SR, MLX90382_DE_SR_DISABLE);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status =
-      mlx90382_nvram_write_verify(MLX90382_REG_IN_APPLICATION, 0x0006U);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status = mlx90382_register_read(MLX90382_REG_CONFIG, &config_reg);
-  if (hal_status != HAL_OK) return hal_status;
-  config_reg &= (uint16_t)~MLX90382_CONFIG_SENSING_MODE_MASK;
-  config_reg |= MLX90382_SENSING_MODE_YZ;
-  config_reg &= (uint16_t)~MLX90382_CONFIG_GPIO_IF_MASK;
-  config_reg |= MLX90382_GPIO_IF_SPI_BUS;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_CONFIG, config_reg,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_FADDR01, 0x0000U,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_FADDR23, 0x0000U,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_FR_CONFIG,
-                                               MLX90382_FR_CONFIG_5BYTE_FRAME,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_SC_Y1,
-                                               MLX90382_SC_Y1_FULL_RANGE,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_SC_Y2,
-                                               MLX90382_SC_Y2_FULL_RANGE,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_SC_YE,
-                                               MLX90382_SC_YE_FULL_RANGE,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-
-  {
-    uint16_t de_cfg = 0U;
-    hal_status = mlx90382_register_read(MLX90382_REG_DISABLE_CFG, &de_cfg);
-    if (hal_status != HAL_OK) return hal_status;
-    de_cfg &= (uint16_t)~MLX90382_DE_DSP_RMM_MASK;
-    hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_DISABLE_CFG,
-                                                 de_cfg, &nvram_changed);
-    if (hal_status != HAL_OK) return hal_status;
-  }
-
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_RMM_CFG,
-                                               MLX90382_RMM_CFG_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ_GAIN,
-                                               MLX90382_PEQ_GAIN_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ00_01,
-                                               MLX90382_PEQ00_01_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ02_03,
-                                               MLX90382_PEQ02_03_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ04_05,
-                                               MLX90382_PEQ04_05_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ06_07,
-                                               MLX90382_PEQ06_07_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ08_09,
-                                               MLX90382_PEQ08_09_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ10_11,
-                                               MLX90382_PEQ10_11_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ12_13,
-                                               MLX90382_PEQ12_13_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_PEQ14_15,
-                                               MLX90382_PEQ14_15_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_S_IQ,
-                                               MLX90382_S_IQ_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-  hal_status = mlx90382_nvram_write_if_changed(MLX90382_REG_S_QQ,
-                                               MLX90382_S_QQ_VAL,
-                                               &nvram_changed);
-  if (hal_status != HAL_OK) return hal_status;
-
-  if (nvram_changed) {
-    hal_status = mlx90382_register_write(MLX90382_REG_CRC_CTRL, 0x0001U);
-    if (hal_status != HAL_OK) return hal_status;
-    HAL_Delay(1U);  // >= 10 µs
-    hal_status = mlx90382_register_read(MLX90382_REG_CRC_CTRL, &crc_status);
-    if (hal_status != HAL_OK) return hal_status;
-    if (!(crc_status & 0x0002U)) return HAL_ERROR;  // CRC_CALC_DONE not set
-    hal_status = mlx90382_register_read(MLX90382_REG_CRC, &crc);
-    if (hal_status != HAL_OK) return hal_status;
-    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_CUS_CRC, crc);
-    if (hal_status != HAL_OK) return hal_status;
-
-    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_NVOP_KEY,
-                                             MLX90382_NVOP_KEY_LO);
-    if (hal_status != HAL_OK) return hal_status;
-    hal_status = mlx90382_nvram_write_verify(MLX90382_REG_NVOP_KEY,
-                                             MLX90382_NVOP_KEY_HI);
-    if (hal_status != HAL_OK) return hal_status;
-    hal_status =
-        mlx90382_register_write(MLX90382_REG_NVM_CTRL, MLX90382_STORE_REQ);
-    if (hal_status != HAL_OK) return hal_status;
-    HAL_Delay(50U);  // >=15 ms for NVM write to complete
-  }
-
-  hal_status = mlx90382_register_write(MLX90382_REG_IN_APPLICATION, 0x0000U);
-  if (hal_status != HAL_OK) return hal_status;
-
-  return HAL_OK;
-}
-
-static uint16_t mlx90382_parse_frame_word(const uint8_t *frame) {
-  return (uint16_t)(((uint16_t)frame[3U] << 8U) | frame[4U]);
-}
-
-static HAL_StatusTypeDef mlx90382_start_frame_dma(void) {
-  HAL_StatusTypeDef hal_status;
-
-  if (s_spi_dma_busy) return HAL_BUSY;
-
-  s_spi_dma_busy = true;
-  s_spi_dma_done = false;
-
-  mlx90382_chip_select(true);
-  hal_status = HAL_SPI_TransmitReceive_DMA(
-      &hspi2, s_spi_frame_tx, s_spi_frame_rx, MLX90382_FRAME_TRANSFER_SIZE);
-  if (hal_status != HAL_OK) {
-    mlx90382_chip_select(false);
-    s_spi_dma_busy = false;
-  }
-
-  return hal_status;
-}
-
+//? Move this to thermistor .h/c
 static HAL_StatusTypeDef thermistor_init(void) {
   ADC_ChannelConfTypeDef channel_config = {0};
 
@@ -487,70 +113,11 @@ static uint16_t thermistor_read(void) {
   }
 }
 
-static void ws22_build_device_type_packet(uint8_t *packet, uint16_t angle_raw) {
-  uint16_t angle_14b = (uint16_t)(angle_raw >> 2U);
-
-  packet[0U] = (uint8_t)((0x02U << 6U) | (WS22_SENSOR_DEVICE_TYPE & MASK_6B));
-  packet[1U] = 0x00U;
-  packet[2U] = (uint8_t)((angle_14b >> 7U) & MASK_7B);
-  packet[3U] = (uint8_t)(angle_14b & MASK_7B);
-}
-
-static void ws22_build_data_packet(uint8_t *packet, uint16_t thermistor_raw,
-                                   uint16_t angle_raw) {
-  uint16_t angle_14b = (uint16_t)(angle_raw >> 2U);
-
-  packet[0U] = (uint8_t)((0x03U << 6U) | ((thermistor_raw >> 6U) & MASK_6B));
-  packet[1U] = (uint8_t)((thermistor_raw << 1U) & MASK_7B);
-  packet[2U] = (uint8_t)((angle_14b >> 7U) & MASK_7B);
-  packet[3U] = (uint8_t)(angle_14b & MASK_7B);
-}
-
-static void ws22_queue_packet(const uint8_t *packet) {
-  uint32_t index;
-
-  __disable_irq();
-  for (index = 0U; index < WS22_PACKET_SIZE; ++index) {
-    s_uart_fill_buffer[index] = packet[index];
-  }
-  s_uart_packet_pending = true;
-  __enable_irq();
-}
-
-static HAL_StatusTypeDef ws22_kick_tx(void) {
-  HAL_StatusTypeDef hal_status = HAL_OK;
-  uint8_t *next_buffer = NULL;
-
-  __disable_irq();
-  if (!s_uart_tx_busy && s_uart_packet_pending) {
-    uint8_t *previous_tx_buffer = (uint8_t *)s_uart_tx_buffer;
-
-    s_uart_tx_buffer = s_uart_fill_buffer;
-    s_uart_fill_buffer = previous_tx_buffer;
-    s_uart_packet_pending = false;
-    s_uart_tx_busy = true;
-    next_buffer = (uint8_t *)s_uart_tx_buffer;
-  }
-  __enable_irq();
-
-  if (next_buffer != NULL) {
-    hal_status = HAL_UART_Transmit_IT(&huart2, next_buffer, WS22_PACKET_SIZE);
-    if (hal_status != HAL_OK) {
-      __disable_irq();
-      s_uart_tx_busy = false;
-      __enable_irq();
-    }
-  }
-
-  return hal_status;
-}
-
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
     HAL_StatusTypeDef hal_status;
 
-    s_uart_tx_busy = false;
-    hal_status = ws22_kick_tx();
+    hal_status = ws22_handle_uart_tx_complete(huart);
     if (hal_status != HAL_OK) {
       s_uart_error_count++;
       s_app_status = APP_STATUS_UART_ERROR;
@@ -560,7 +127,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
-    s_uart_tx_busy = false;
+    ws22_handle_uart_error(huart);
     s_uart_error_count++;
     s_app_status = APP_STATUS_UART_ERROR;
   }
@@ -568,20 +135,14 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
   if (hspi->Instance == SPI2) {
-    mlx90382_chip_select(false);
-    s_mlx90382_reading = mlx90382_parse_frame_word(s_spi_frame_rx);
-    s_spi_dma_busy = false;
-    s_spi_dma_done = true;
+    mlx90382_handle_spi_txrx_complete(hspi);
     s_app_status = APP_STATUS_OK;
   }
 }
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
   if (hspi->Instance == SPI2) {
-    mlx90382_chip_select(false);
-    s_spi_dma_busy = false;
-    s_spi_dma_done = false;
-    s_spi_error_count++;
+    mlx90382_handle_spi_error(hspi);
     s_app_status = APP_STATUS_SPI_ERROR;
   }
 }
@@ -624,6 +185,10 @@ int main(void) {
     Error_Handler();
   }
 
+  if (ws22_init() != HAL_OK) {
+    Error_Handler();
+  }
+
   if (mlx90382_init() != HAL_OK) {
     Error_Handler();
   }
@@ -639,32 +204,24 @@ int main(void) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    if (s_spi_dma_done) {
-      uint8_t local_packet[WS22_PACKET_SIZE];
+    uint16_t angle_raw;
+
+    if (mlx90382_take_reading(&angle_raw)) {
       uint16_t thermistor_raw;
 
-      s_spi_dma_done = false;
       thermistor_raw = thermistor_read();
 
-      if (!s_device_type_sent) {
-        ws22_build_device_type_packet(local_packet,
-                                      (uint16_t)s_mlx90382_reading);
-        s_device_type_sent = true;
-      } else {
-        ws22_build_data_packet(local_packet, thermistor_raw,
-                               (uint16_t)s_mlx90382_reading);
-      }
-
-      ws22_queue_packet(local_packet);
-      if (ws22_kick_tx() != HAL_OK) {
+      if (ws22_send_measurement(thermistor_raw, angle_raw) != HAL_OK) {
         s_uart_error_count++;
         s_app_status = APP_STATUS_UART_ERROR;
       }
-    }
 
-    if (!s_spi_dma_busy && !s_spi_dma_done) {
       if (mlx90382_start_frame_dma() != HAL_OK) {
-        s_spi_error_count++;
+        s_app_status = APP_STATUS_SPI_ERROR;
+        HAL_Delay(1U);
+      }
+    } else if (!mlx90382_is_busy()) {
+      if (mlx90382_start_frame_dma() != HAL_OK) {
         s_app_status = APP_STATUS_SPI_ERROR;
         HAL_Delay(1U);
       }
