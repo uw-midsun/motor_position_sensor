@@ -18,6 +18,7 @@ static uint8_t *volatile s_uart_fill_buffer = s_uart_packet_b;
 
 static volatile bool s_uart_tx_busy = false;
 static volatile bool s_uart_packet_pending = false;
+static uint32_t s_last_device_type_tick = 0U;
 static bool s_device_type_sent = false;
 
 static void ws22_build_device_type_packet(uint8_t *packet, uint16_t angle_raw) {
@@ -92,6 +93,7 @@ HAL_StatusTypeDef ws22_init(void) {
   s_uart_fill_buffer = s_uart_packet_b;
   s_uart_tx_busy = false;
   s_uart_packet_pending = false;
+  s_last_device_type_tick = 0U;
   s_device_type_sent = false;
 
   return hal_status;
@@ -101,8 +103,10 @@ HAL_StatusTypeDef ws22_send_measurement(uint16_t thermistor_raw,
                                         uint16_t angle_raw) {
   uint8_t local_packet[WS22_PACKET_SIZE];
 
-  if (!s_device_type_sent) {
+  uint32_t now = HAL_GetTick();
+  if (!s_device_type_sent || (now - s_last_device_type_tick) >= 100U) {
     ws22_build_device_type_packet(local_packet, angle_raw);
+    s_last_device_type_tick = now;
     s_device_type_sent = true;
   } else {
     ws22_build_data_packet(local_packet, thermistor_raw, angle_raw);
