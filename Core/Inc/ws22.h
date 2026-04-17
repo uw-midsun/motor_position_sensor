@@ -14,7 +14,7 @@
 #include "stm32f1xx_hal.h"
 
 #define WS22_PACKET_SIZE 4U
-#define WS22_SENSOR_DEVICE_TYPE 5U
+#define WS22_SENSOR_DEVICE_TYPE 7U
 
 HAL_StatusTypeDef ws22_init(void);
 
