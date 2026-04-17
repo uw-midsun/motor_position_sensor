@@ -1,6 +1,7 @@
 # Build output
 Debug/
 Release/
+build/
 
 # STM32CubeIDE backup files
 Core/Inc/Backup/
